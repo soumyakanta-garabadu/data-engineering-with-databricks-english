@@ -280,11 +280,13 @@ WHEN NOT MATCHED AND b.delicious = true THEN
 -- COMMAND ----------
 
 -- MAGIC %python
--- MAGIC version = spark.sql("DESCRIBE HISTORY beans").selectExpr("max(version)").first()[0]
--- MAGIC last_tx = spark.sql("DESCRIBE HISTORY beans").filter(f"version={version}")
--- MAGIC assert last_tx.select("operation").first()[0] == "MERGE", "Transaction should be completed as a merge"
--- MAGIC metrics = last_tx.select("operationMetrics").first()[0]
--- MAGIC assert metrics["numOutputRows"] == "3", "Make sure you only insert delicious beans"
+-- MAGIC import pyspark.sql.functions as F
+-- MAGIC last_version = spark.sql("DESCRIBE HISTORY beans").orderBy(F.col("version").desc()).first()
+-- MAGIC 
+-- MAGIC assert last_version["operation"] == "MERGE", "Transaction should be completed as a merge"
+-- MAGIC 
+-- MAGIC metrics = last_version["operationMetrics"]
+-- MAGIC assert metrics["numOutputRows"] == "5", "Make sure you only insert delicious beans"
 -- MAGIC assert metrics["numTargetRowsUpdated"] == "1", "Make sure you match on name and color"
 -- MAGIC assert metrics["numTargetRowsInserted"] == "2", "Make sure you insert newly collected beans"
 -- MAGIC assert metrics["numTargetRowsDeleted"] == "0", "No rows should be deleted by this operation"
@@ -348,7 +350,7 @@ DROP TABLE beans
 -- COMMAND ----------
 
 -- MAGIC %md-sandbox
--- MAGIC &copy; 2022 Databricks, Inc. All rights reserved.<br/>
+-- MAGIC &copy; 2023 Databricks, Inc. All rights reserved.<br/>
 -- MAGIC Apache, Apache Spark, Spark and the Spark logo are trademarks of the <a href="https://www.apache.org/">Apache Software Foundation</a>.<br/>
 -- MAGIC <br/>
 -- MAGIC <a href="https://databricks.com/privacy-policy">Privacy Policy</a> | <a href="https://databricks.com/terms-of-use">Terms of Use</a> | <a href="https://help.databricks.com/">Support</a>

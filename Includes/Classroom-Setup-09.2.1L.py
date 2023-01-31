@@ -1,5 +1,16 @@
 # Databricks notebook source
-# MAGIC %run ./_utility-methods
+# MAGIC %run ./_common
+
+# COMMAND ----------
+
+@DBAcademyHelper.monkey_patch
+def get_dlt_policy(self):
+    from dbacademy.dbhelper import ClustersHelper
+
+    dlt_policy = DA.client.cluster_policies.get_by_name(ClustersHelper.POLICY_DLT_ONLY)
+    assert dlt_policy is not None, f"Could not find the cluster policy \"{ClustersHelper.POLICY_DLT_ONLY}\"; Please run the notebook Includes/Workspace-Setup before proceeding."
+    
+    return dlt_policy
 
 # COMMAND ----------
 
@@ -17,28 +28,33 @@ def get_pipeline_config(self):
 
 @DBAcademyHelper.monkey_patch
 def print_pipeline_config(self):
-    pipeline_name, notebook = self.get_pipeline_config()
+    "Provided by DBAcademy, this function renders the configuration of the pipeline as HTML"
+    from dbacademy.dbhelper import ClustersHelper
 
+    pipeline_name, path = self.get_pipeline_config()
+    
     displayHTML(f"""<table style="width:100%">
     <tr>
         <td style="white-space:nowrap; width:1em">Pipeline Name:</td>
         <td><input type="text" value="{pipeline_name}" style="width:100%"></td></tr>
     <tr>
         <td style="white-space:nowrap; width:1em">Target:</td>
-        <td><input type="text" value="{DA.db_name}" style="width:100%"></td></tr>
+        <td><input type="text" value="{DA.schema_name}" style="width:100%"></td></tr>
     <tr>
         <td style="white-space:nowrap; width:1em">Storage Location:</td>
         <td><input type="text" value="{DA.paths.storage_location}" style="width:100%"></td></tr>
     <tr>
         <td style="white-space:nowrap; width:1em">Notebook Path:</td>
-        <td><input type="text" value="{notebook}" style="width:100%"></td></tr>
+        <td><input type="text" value="{path}" style="width:100%"></td></tr>
     <tr>
-        <td style="white-space:nowrap; width:1em">Datsets Path:</td>
+        <td style="white-space:nowrap; width:1em">Datasets Path:</td>
         <td><input type="text" value="{DA.paths.datasets}" style="width:100%"></td></tr>
     <tr>
         <td style="white-space:nowrap; width:1em">Source:</td>
         <td><input type="text" value="{DA.paths.stream_path}" style="width:100%"></td></tr>
-    
+    <tr>
+        <td style="white-space:nowrap; width:1em">Policy:</td>
+        <td><input type="text" value="{ClustersHelper.POLICY_DLT_ONLY}" style="width:100%"></td></tr>
     </table>""")
 
 # COMMAND ----------
@@ -56,17 +72,21 @@ def create_pipeline(self):
     response = self.client.pipelines().create(
         name = pipeline_name, 
         storage = DA.paths.storage_location, 
-        target = DA.db_name, 
+        target = DA.schema_name, 
         notebooks = [path],
         configuration = {
             "spark.master": "local[*]",
             "datasets_path": DA.paths.datasets,
             "source": DA.paths.stream_path,
         },
-        clusters=[{ "label": "default", "num_workers": 0 }])
+        clusters=[{ 
+            "num_workers": 0,
+            "policy_id": self.get_dlt_policy().get("policy_id")
+        }]
+    )
     
     pipeline_id = response.get("pipeline_id")
-    print(f"Created pipline \"{pipeline_name}\" (#{pipeline_id})")
+    print(f"Created the pipeline \"{pipeline_name}\" ({pipeline_id})")
 
 # COMMAND ----------
 
@@ -74,6 +94,7 @@ def create_pipeline(self):
 def validate_pipeline_config(self):
     "Provided by DBAcademy, this function validates the configuration of the pipeline"
     import json
+    from dbacademy.dbhelper import ClustersHelper
     
     pipeline_name, path = self.get_pipeline_config()
 
@@ -86,7 +107,7 @@ def validate_pipeline_config(self):
     assert storage == DA.paths.storage_location, f"Invalid storage location. Found \"{storage}\", expected \"{DA.paths.storage_location}\" "
     
     target = spec.get("target")
-    assert target == DA.db_name, f"Invalid target. Found \"{target}\", expected \"{DA.db_name}\" "
+    assert target == DA.schema_name, f"Invalid target. Found \"{target}\", expected \"{DA.schema_name}\" "
     
     libraries = spec.get("libraries")
     assert libraries is None or len(libraries) > 0, f"The notebook path must be specified."
@@ -99,11 +120,16 @@ def validate_pipeline_config(self):
     configuration = spec.get("configuration")
     assert configuration is not None, f"The three configuration parameters were not specified."
     datasets_path = configuration.get("datasets_path")
-    assert datasets_path == DA.paths.datasets, f"Invalid \"datasets_path\" value. Found \"{datasets_path}\", expected \"{DA.paths.datasets}\"."
-    spark_master = configuration.get("spark.master")
-    assert spark_master == f"local[*]", f"Invalid \"spark.master\" value. Expected \"local[*]\", found \"{spark_master}\"."
+    assert datasets_path == DA.paths.datasets, f"Invalid datasets_path value. Found \"{datasets_path}\", expected \"{DA.paths.datasets}\"."
+    
     stream_source = configuration.get("source")
     assert stream_source == DA.paths.stream_path, f"Invalid \"source\" value. Expected \"{DA.paths.stream_path}\", found \"{stream_source}\"."
+
+    spark_master = configuration.get("spark.master")
+    assert spark_master == f"local[*]", f"Invalid spark.master value. Expected \"local[*]\", found \"{spark_master}\"."
+    
+    cluster_count = len(spec.get("clusters"))
+    assert cluster_count == 1, f"Expected one, and only one, cluster configuration, found {cluster_count}. You can use the JSON UI to edit the configuration and remove the extra clusters."
     
     cluster = spec.get("clusters")[0]
     autoscale = cluster.get("autoscale")
@@ -112,11 +138,15 @@ def validate_pipeline_config(self):
     num_workers = cluster.get("num_workers")
     assert num_workers == 0, f"Expected the number of workers to be 0, found {num_workers}."
 
+    policy_id = cluster.get("policy_id")
+    policy_name = None if policy_id is None else self.client.cluster_policies.get_by_id(policy_id).get("name")
+    assert policy_id == self.get_dlt_policy().get("policy_id"), f"Expected the policy to be set to \"{ClustersHelper.POLICY_DLT_ONLY}\", found \"{policy_name}\"."
+
     development = spec.get("development")
     assert development == True, f"The pipline mode should be set to \"Development\"."
     
     channel = spec.get("channel")
-    assert channel is None or channel == "CURRENT", f"Expected the channel to be \"Current\" but found \"{channel}\"."
+    assert channel is None or channel == "CURRENT", f"Expected the channel to be Current but found {channel}."
     
     photon = spec.get("photon")
     assert photon == True, f"Expected Photon to be enabled."
@@ -124,23 +154,6 @@ def validate_pipeline_config(self):
     continuous = spec.get("continuous")
     assert continuous == False, f"Expected the Pipeline mode to be \"Triggered\", found \"Continuous\"."
 
-    policy = self.client.cluster_policies.get_by_name("Student's DLT-Only Policy")
-    if policy is not None:
-        cluster = { 
-            "num_workers": 0,
-            "label": "default", 
-            "policy_id": policy.get("policy_id")
-        }
-        self.client.pipelines.create_or_update(name = pipeline_name,
-                                               storage = DA.paths.storage_location,
-                                               target = DA.db_name,
-                                               notebooks = [path],
-                                               configuration = {
-                                                   "spark.master": "local[*]",
-                                                   "datasets_path": DA.paths.datasets,
-                                                   "source": DA.paths.stream_path,
-                                               },
-                                               clusters=[cluster])
     print("All tests passed!")
 
 
@@ -199,8 +212,8 @@ def create_job(self):
     params = {
         "name": job_name,
         "tags": {
-            "dbacademy.course": self.course_name,
-            "dbacademy.source": self.course_name
+            "dbacademy.course": self.course_config.build_name,
+            "dbacademy.source": self.course_config.build_name
         },
         "email_notifications": {},
         "timeout_seconds": 7200,
@@ -351,9 +364,11 @@ def start_job(self):
 
 # COMMAND ----------
 
-DA = DBAcademyHelper(lesson="jobs_lab_92", **helper_arguments)
-DA.reset_environment()
-DA.init(install_datasets=True, create_db=True)
+lesson_config.name = "jobs_lab_92"
+
+DA = DBAcademyHelper(course_config, lesson_config)
+DA.reset_lesson()
+DA.init()
 
 DA.paths.stream_path = f"{DA.paths.working_dir}/stream"
 DA.paths.storage_location = f"{DA.paths.working_dir}/storage"

@@ -1,12 +1,11 @@
 # Databricks notebook source
-# MAGIC %run ./_utility-methods
+# MAGIC %run ./_common
 
 # COMMAND ----------
 
-DA = DBAcademyHelper(**helper_arguments)
-DA.init(install_datasets=False, create_db=False)
+lesson_config.create_schema = False
+lesson_config.installing_datasets = False
 
-DA.cleanup_databases()    # Remove any databases created by this course
-DA.cleanup_working_dir()  # Remove any files created in the workspace
-DA.cleanup_datasets()     # Remove the local datasets forcing a reinstall
+DA = DBAcademyHelper(course_config, lesson_config)
+DA.reset_learning_environment()
 

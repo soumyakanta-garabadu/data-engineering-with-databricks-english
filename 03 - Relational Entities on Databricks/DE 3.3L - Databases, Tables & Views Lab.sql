@@ -73,13 +73,13 @@ FROM parquet.`${DA.paths.datasets}/weather/StationData-parquet`
 -- MAGIC 
 -- MAGIC ## Create a Database
 -- MAGIC 
--- MAGIC Create a database in the default location using the **`da.db_name`** variable defined in setup script.
+-- MAGIC Create a database in the default location using the **`da.schema_name`** variable defined in setup script.
 
 -- COMMAND ----------
 
 -- TODO
 
-<FILL-IN> ${da.db_name}
+<FILL-IN> ${da.schema_name}
 
 -- COMMAND ----------
 
@@ -90,7 +90,7 @@ FROM parquet.`${DA.paths.datasets}/weather/StationData-parquet`
 -- COMMAND ----------
 
 -- MAGIC %python 
--- MAGIC assert spark.sql(f"SHOW DATABASES").filter(f"databaseName == '{DA.db_name}'").count() == 1, "Database not present"
+-- MAGIC assert spark.sql(f"SHOW DATABASES").filter(f"databaseName == '{DA.schema_name}'").count() == 1, "Database not present"
 
 -- COMMAND ----------
 
@@ -105,7 +105,7 @@ FROM parquet.`${DA.paths.datasets}/weather/StationData-parquet`
 
 -- TODO
 
-<FILL-IN> ${da.db_name}
+<FILL-IN> ${da.schema_name}
 
 -- COMMAND ----------
 
@@ -116,7 +116,7 @@ FROM parquet.`${DA.paths.datasets}/weather/StationData-parquet`
 -- COMMAND ----------
 
 -- MAGIC %python
--- MAGIC assert spark.sql(f"SHOW CURRENT DATABASE").first()["namespace"] == DA.db_name, "Not using the correct database"
+-- MAGIC assert spark.sql(f"SHOW CURRENT DATABASE").first()["namespace"] == DA.schema_name, "Not using the correct database"
 
 -- COMMAND ----------
 
@@ -250,7 +250,7 @@ DESCRIBE EXTENDED weather_external
 
 -- TODO
 
-<FILL_IN> ${da.db_name}
+<FILL_IN> ${da.schema_name}
 
 -- COMMAND ----------
 
@@ -261,7 +261,7 @@ DESCRIBE EXTENDED weather_external
 -- COMMAND ----------
 
 -- MAGIC %python
--- MAGIC assert spark.sql(f"SHOW DATABASES").filter(f"databaseName == '{DA.db_name}'").count() == 0, "Database present"
+-- MAGIC assert spark.sql(f"SHOW DATABASES").filter(f"databaseName == '{DA.schema_name}'").count() == 0, "Database present"
 
 -- COMMAND ----------
 
@@ -310,8 +310,8 @@ DESCRIBE EXTENDED weather_external
 
 -- COMMAND ----------
 
-CREATE DATABASE ${da.db_name} LOCATION '${da.paths.working_dir}/${da.db_name}';
-USE ${da.db_name};
+CREATE DATABASE ${da.schema_name} LOCATION '${da.paths.working_dir}/${da.schema_name}';
+USE ${da.schema_name};
 
 -- COMMAND ----------
 
@@ -482,7 +482,7 @@ SELECT * FROM global_temp.celsius_global
 
 -- COMMAND ----------
 
-DROP DATABASE ${da.db_name} CASCADE
+DROP DATABASE ${da.schema_name} CASCADE
 
 -- COMMAND ----------
 
@@ -511,7 +511,7 @@ DROP DATABASE ${da.db_name} CASCADE
 -- COMMAND ----------
 
 -- MAGIC %md-sandbox
--- MAGIC &copy; 2022 Databricks, Inc. All rights reserved.<br/>
+-- MAGIC &copy; 2023 Databricks, Inc. All rights reserved.<br/>
 -- MAGIC Apache, Apache Spark, Spark and the Spark logo are trademarks of the <a href="https://www.apache.org/">Apache Software Foundation</a>.<br/>
 -- MAGIC <br/>
 -- MAGIC <a href="https://databricks.com/privacy-policy">Privacy Policy</a> | <a href="https://databricks.com/terms-of-use">Terms of Use</a> | <a href="https://help.databricks.com/">Support</a>

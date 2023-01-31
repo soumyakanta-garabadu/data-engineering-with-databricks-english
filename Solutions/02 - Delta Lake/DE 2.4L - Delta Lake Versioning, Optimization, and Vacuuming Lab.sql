@@ -231,7 +231,7 @@ DESCRIBE HISTORY beans
 -- MAGIC 
 -- MAGIC 
 -- MAGIC ## File Compaction
--- MAGIC Looking at the transaction metrics during your reversion, you are surprised you have some many files for such a small collection of data.
+-- MAGIC Looking at the transaction metrics during your reversion, you are surprised you have so many files for such a small collection of data.
 -- MAGIC 
 -- MAGIC While indexing on a table of this size is unlikely to improve performance, you decide to add a Z-order index on the **`name`** field in anticipation of your bean collection growing exponentially over time.
 -- MAGIC 
@@ -394,7 +394,7 @@ SELECT * FROM beans
 -- COMMAND ----------
 
 -- MAGIC %md-sandbox
--- MAGIC &copy; 2022 Databricks, Inc. All rights reserved.<br/>
+-- MAGIC &copy; 2023 Databricks, Inc. All rights reserved.<br/>
 -- MAGIC Apache, Apache Spark, Spark and the Spark logo are trademarks of the <a href="https://www.apache.org/">Apache Software Foundation</a>.<br/>
 -- MAGIC <br/>
 -- MAGIC <a href="https://databricks.com/privacy-policy">Privacy Policy</a> | <a href="https://databricks.com/terms-of-use">Terms of Use</a> | <a href="https://help.databricks.com/">Support</a>

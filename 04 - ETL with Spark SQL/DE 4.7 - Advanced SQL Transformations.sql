@@ -330,7 +330,7 @@ SELECT * FROM transactions
 -- MAGIC 
 -- MAGIC Higher order functions include:
 -- MAGIC - **`FILTER`** filters an array using the given lambda function.
--- MAGIC - **`EXIST`** tests whether a statement is true for one or more elements in an array. 
+-- MAGIC - **`EXISTS`** tests whether a statement is true for one or more elements in an array. 
 -- MAGIC - **`TRANSFORM`** uses the given lambda function to transform all elements in an array.
 -- MAGIC - **`REDUCE`** takes two lambda functions to reduce the elements of an array to a single value by merging the elements into a buffer, and the apply a finishing function on the final buffer.
 
@@ -439,7 +439,7 @@ SELECT * FROM king_item_revenues
 -- COMMAND ----------
 
 -- MAGIC %md-sandbox
--- MAGIC &copy; 2022 Databricks, Inc. All rights reserved.<br/>
+-- MAGIC &copy; 2023 Databricks, Inc. All rights reserved.<br/>
 -- MAGIC Apache, Apache Spark, Spark and the Spark logo are trademarks of the <a href="https://www.apache.org/">Apache Software Foundation</a>.<br/>
 -- MAGIC <br/>
 -- MAGIC <a href="https://databricks.com/privacy-policy">Privacy Policy</a> | <a href="https://databricks.com/terms-of-use">Terms of Use</a> | <a href="https://help.databricks.com/">Support</a>

@@ -257,7 +257,7 @@ print("Hello Python!")
 print(f"DA:                   {DA}")
 print(f"DA.username:          {DA.username}")
 print(f"DA.paths.working_dir: {DA.paths.working_dir}")
-print(f"DA.db_name:           {DA.db_name}")
+print(f"DA.schema_name:       {DA.schema_name}")
 
 # COMMAND ----------
 
@@ -275,7 +275,7 @@ print(f"DA.db_name:           {DA.db_name}")
 # MAGIC %sql
 # MAGIC SELECT '${da.username}' AS current_username,
 # MAGIC        '${da.paths.working_dir}' AS working_directory,
-# MAGIC        '${da.db_name}' as database_name
+# MAGIC        '${da.schema_name}' as schema_name
 
 # COMMAND ----------
 
@@ -395,7 +395,7 @@ DA.cleanup()
 # COMMAND ----------
 
 # MAGIC %md-sandbox
-# MAGIC &copy; 2022 Databricks, Inc. All rights reserved.<br/>
+# MAGIC &copy; 2023 Databricks, Inc. All rights reserved.<br/>
 # MAGIC Apache, Apache Spark, Spark and the Spark logo are trademarks of the <a href="https://www.apache.org/">Apache Software Foundation</a>.<br/>
 # MAGIC <br/>
 # MAGIC <a href="https://databricks.com/privacy-policy">Privacy Policy</a> | <a href="https://databricks.com/terms-of-use">Terms of Use</a> | <a href="https://help.databricks.com/">Support</a>

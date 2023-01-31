@@ -15,15 +15,20 @@
 # MAGIC The key changes this notebook makes includes:
 # MAGIC * Updating user-specific grants such that they can create databases/schemas against the current catalog when they are not workspace-admins.
 # MAGIC * Configures three cluster policies:
-# MAGIC     * **Student's All-Purpose Policy** - which should be used on clusters running standard notebooks.
-# MAGIC     * **Student's Jobs-Only Policy** - which should be used on workflows/jobs
-# MAGIC     * **Student's DLT-Only Policy** - which should be used on DLT piplines (automatically applied)
+# MAGIC     * **DBAcademy All-Purpose Policy** - which should be used on clusters running standard notebooks.
+# MAGIC     * **DBAcademy Jobs-Only Policy** - which should be used on workflows/jobs
+# MAGIC     * **DBAcademy DLT-Only Policy** - which should be used on DLT piplines (automatically applied)
 # MAGIC * Create or update the shared **Starter Warehouse** for use in Databricks SQL exercises
-# MAGIC * Create the Instance Pool **Student's Pool** for use by students and the "student" and "jobs" policies.
+# MAGIC * Create the Instance Pool **DBAcademy Pool** for use by students and the "student" and "jobs" policies.
 
 # COMMAND ----------
 
-# MAGIC %run ./_utility-methods
+# MAGIC %run ./_common
+
+# COMMAND ----------
+
+# Start a timer so we can benchmark execution duration.
+setup_start = dbgems.clock_start()
 
 # COMMAND ----------
 
@@ -33,15 +38,17 @@
 
 # COMMAND ----------
 
+from dbacademy.dbhelper import WorkspaceHelper
+
 # Setup the widgets to collect required parameters.
-from dbacademy_helper.workspace_helper import ALL_USERS # no other option for this course
-dbutils.widgets.dropdown("configure_for", ALL_USERS, [ALL_USERS], "Configure Workspace For")
+dbutils.widgets.dropdown("configure_for", WorkspaceHelper.CONFIGURE_FOR_ALL_USERS, 
+                         [WorkspaceHelper.CONFIGURE_FOR_ALL_USERS], "Configure For (required)")
 
-# students_count is the reasonable estiamte to the maximum number of students
-dbutils.widgets.text("students_count", "", "Number of Students")
+# lab_id is the name assigned to this event/class or alternatively its class number
+dbutils.widgets.text(WorkspaceHelper.PARAM_LAB_ID, "", "Lab/Class ID (optional)")
 
-# event_name is the name assigned to this event/class or alternatively its class number
-dbutils.widgets.text("event_name", "", "Event Name/Class Number")
+# a general purpose description of the class
+dbutils.widgets.text(WorkspaceHelper.PARAM_DESCRIPTION, "", "Description (optional)")
 
 # COMMAND ----------
 
@@ -54,11 +61,12 @@ dbutils.widgets.text("event_name", "", "Event Name/Class Number")
 
 # COMMAND ----------
 
-DA = DBAcademyHelper(**helper_arguments) # Create the DA object
-DA.reset_environment()                   # Reset by removing databases and files from other lessons
-DA.init(install_datasets=True,           # Initialize, install and validate the datasets
-        create_db=False)                 # Continue initialization, create the user-db
-DA.conclude_setup()                      # Conclude setup by advertising environmental changes
+lesson_config.create_schema = False
+
+DA = DBAcademyHelper(course_config, lesson_config)
+DA.reset_lesson()
+DA.init()
+DA.conclude_setup()
 
 # COMMAND ----------
 
@@ -69,7 +77,7 @@ DA.conclude_setup()                      # Conclude setup by advertising environ
 
 # COMMAND ----------
 
-instance_pool_id = DA.workspace.clusters.create_instance_pools()
+instance_pool_id = DA.workspace.clusters.create_instance_pool()
 
 # COMMAND ----------
 
@@ -80,10 +88,23 @@ instance_pool_id = DA.workspace.clusters.create_instance_pools()
 
 # COMMAND ----------
 
-DA.workspace.clusters.create_all_purpose_policy(instance_pool_id)
-DA.workspace.clusters.create_jobs_policy(instance_pool_id)
-DA.workspace.clusters.create_dlt_policy(instance_pool_id)
-None
+from dbacademy.dbhelper import ClustersHelper
+
+ClustersHelper.create_all_purpose_policy(client=DA.client, 
+                                         instance_pool_id=instance_pool_id, 
+                                         spark_version=None,
+                                         autotermination_minutes_max=180,
+                                         autotermination_minutes_default=120)
+
+ClustersHelper.create_jobs_policy(client=DA.client, 
+                                  instance_pool_id=instance_pool_id, 
+                                  spark_version=None)
+
+ClustersHelper.create_dlt_policy(client=DA.client, 
+                                 lab_id=WorkspaceHelper.get_lab_id(), 
+                                 workspace_description=WorkspaceHelper.get_workspace_description(),
+                                 workspace_name=WorkspaceHelper.get_workspace_name(), 
+                                 org_id=dbgems.get_org_id())
 
 # COMMAND ----------
 
@@ -96,7 +117,9 @@ None
 
 # COMMAND ----------
 
-DA.workspace.warehouses.create_shared_sql_warehouse()
+from dbacademy.dbhelper.warehouses_helper_class import WarehousesHelper
+
+DA.workspace.warehouses.create_shared_sql_warehouse(name=WarehousesHelper.WAREHOUSES_DEFAULT_NAME)
 
 # COMMAND ----------
 
@@ -108,8 +131,8 @@ DA.workspace.warehouses.create_shared_sql_warehouse()
 
 # COMMAND ----------
 
-DA.workspace.add_entitlement_workspace_access()
-DA.workspace.add_entitlement_databricks_sql_access()
+WorkspaceHelper.add_entitlement_workspace_access(client=DA.client)
+WorkspaceHelper.add_entitlement_databricks_sql_access(client=DA.client)
 
 # COMMAND ----------
 
@@ -122,22 +145,21 @@ DA.workspace.add_entitlement_databricks_sql_access()
 
 # COMMAND ----------
 
+from dbacademy.dbhelper.databases_helper_class import DatabasesHelper
+
 # Ensures that all users can create databases on the current catalog 
 # for cases wherein the user/student is not an admin.
-job_id = DA.workspace.databases.configure_permissions("Configure-Permissions")
-
-# COMMAND ----------
-
+job_id = DatabasesHelper.configure_permissions(DA.client, "Configure-Permissions", "10.4.x-scala2.12")
 DA.client.jobs().delete_by_id(job_id)
 
 # COMMAND ----------
 
-DA.setup_completed()
+print(f"Setup completed {dbgems.clock_stopped(setup_start)}")
 
 # COMMAND ----------
 
 # MAGIC %md-sandbox
-# MAGIC &copy; 2022 Databricks, Inc. All rights reserved.<br/>
+# MAGIC &copy; 2023 Databricks, Inc. All rights reserved.<br/>
 # MAGIC Apache, Apache Spark, Spark and the Spark logo are trademarks of the <a href="https://www.apache.org/">Apache Software Foundation</a>.<br/>
 # MAGIC <br/>
 # MAGIC <a href="https://databricks.com/privacy-policy">Privacy Policy</a> | <a href="https://databricks.com/terms-of-use">Terms of Use</a> | <a href="https://help.databricks.com/">Support</a>
